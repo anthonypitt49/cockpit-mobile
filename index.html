@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1117">
+<title>Cockpit — mobile</title>
+<style>
+  :root{--bg:#0e1117;--surf:#171b22;--surf2:#1e232c;--bd:#2a303a;--ink:#e6e9ef;--ink2:#9aa4b2;--mut:#6b7686;--good:#3fb950;--bad:#f0616d;--accent:#5b8cff}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.45;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+  .wrap{max-width:560px;margin:0 auto;padding:14px}
+  .up{color:var(--good)} .down{color:var(--bad)}
+  /* écran verrouillé */
+  #lock{min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
+  #lock[hidden]{display:none}
+  #lock h1{font-size:22px;margin:0}
+  #lock p{color:var(--ink2);margin:0;max-width:34ch}
+  #pass{font-size:17px;padding:12px 14px;border-radius:12px;border:1px solid var(--bd);background:var(--surf);color:var(--ink);width:min(320px,80vw);text-align:center}
+  #go{font-size:16px;font-weight:700;padding:12px 22px;border-radius:12px;border:0;background:var(--accent);color:#fff;width:min(320px,80vw)}
+  #err{color:var(--bad);font-size:13px;min-height:18px}
+  .hint{color:var(--mut);font-size:12px}
+  /* contenu */
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  header .t{font-size:19px;font-weight:800} header .t small{font-weight:400;color:var(--ink2);font-size:12px}
+  #lockBtn{font-size:12px;color:var(--ink2);background:var(--surf);border:1px solid var(--bd);border-radius:9px;padding:6px 10px}
+  .card{background:var(--surf);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+  .pf-val{font-size:32px;font-weight:800;letter-spacing:-.5px}
+  .pf-day{font-size:15px;font-weight:700;margin-left:8px}
+  .pf-sub{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .pf-chip{flex:1;min-width:130px;background:var(--surf2);border-radius:10px;padding:9px 11px}
+  .pf-chip .l{font-size:11px;color:var(--ink2)} .pf-chip .v{font-size:16px;font-weight:700}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink2);margin:18px 4px 8px}
+  .mv{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border:1px solid var(--bd);border-left:4px solid var(--bd);border-radius:11px;background:var(--surf);margin-bottom:8px}
+  .mv.u{border-left-color:var(--good)} .mv.d{border-left-color:var(--bad)}
+  .mv .tk{font-weight:800} .mv .nm{font-size:12px;color:var(--ink2)} .mv .ty{font-size:11px;color:var(--mut)}
+  .mv .pc{text-align:right} .mv .pc b{font-size:17px;font-weight:800} .mv .pc small{display:block;font-size:12px;color:var(--ink2)}
+  .sec{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:10px;background:var(--surf);border:1px solid var(--bd);margin-bottom:6px}
+  .sec .n{font-weight:600;font-size:14px} .sec .n small{color:var(--mut);font-weight:400}
+  .sec .a{font-weight:800}
+  .an-sit{font-size:14px;line-height:1.55}
+  .an-sec{margin:10px 0;padding-left:10px;border-left:2px solid var(--bd)}
+  .an-sec h4{margin:0 0 3px;font-size:14px} .an-sec p{margin:0;font-size:13px;color:var(--ink)}
+  .an-op{background:var(--surf2);border-radius:8px;padding:7px 10px;margin-top:5px;font-size:12.5px}
+  .an-op b{color:var(--accent)}
+  .rev-h{font-size:16px;font-weight:800;margin-bottom:4px}
+  .rev-i{font-size:13px;color:var(--ink)}
+  .badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#2b6a4a;color:#d8ffe9;vertical-align:middle}
+  .al{font-size:13px;padding:8px 11px;border:1px solid var(--bd);border-radius:9px;margin-bottom:6px;background:var(--surf)}
+  .al b{color:var(--bad)}
+  .foot{color:var(--mut);font-size:11px;text-align:center;margin:18px 0 4px}
+  b{font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="lock">
+    <h1>🔒 Cockpit</h1>
+    <p>Entre ton mot de passe pour déverrouiller tes données (elles sont chiffrées — illisibles sans le code).</p>
+    <input id="pass" type="password" inputmode="text" autocomplete="off" placeholder="Mot de passe" autofocus>
+    <button id="go">Déverrouiller</button>
+    <div id="err"></div>
+    <div class="hint">Ton mot de passe ne quitte jamais ton téléphone.</div>
+  </div>
+  <div id="app" hidden></div>
+</div>
+<script>
+const GIST_ID='e964b46a66f005dc45d07b7835fdad39';   // gist secret des données chiffrées
+const sign=(n,d=1)=>n==null?'—':((n>=0?'+':'')+Number(n).toFixed(d)).replace('.',',');
+const cls=n=>n==null?'':n>=0?'up':'down';
+const money=(v,cad)=>v==null?'n/d':(Math.abs(v)>=1000?Math.round(v).toLocaleString('fr-CA'):Math.abs(v)<1?(+v).toLocaleString('fr-CA',{maximumFractionDigits:4}):(+v).toLocaleString('fr-CA',{minimumFractionDigits:2,maximumFractionDigits:2}))+(cad?' $CA':' $');
+const esc=s=>String(s==null?'':s);
+
+async function fetchEnc(){
+  if(GIST_ID && !GIST_ID.startsWith('__')){
+    const g=await (await fetch('https://api.github.com/gists/'+GIST_ID,{headers:{'Accept':'application/vnd.github+json'}})).json();
+    return g.files['mobile.enc'].content.trim();
+  }
+  return (await fetch('./mobile.enc')).text();   // test local
+}
+async function decrypt(b64,pass){
+  const raw=Uint8Array.from(atob(b64.trim()),c=>c.charCodeAt(0));
+  const salt=raw.slice(0,16),iv=raw.slice(16,28),data=raw.slice(28);
+  const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,data);
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+function tyLabel(t){return t==='crypto'?'🪙 crypto':t==='etf'?'📦 FNB':'📈 action'}
+function secEmoji(s){return /crypto/i.test(s)?'🪙':/semi|puce/i.test(s)?'🔧':/FNB|diversif/i.test(s)?'📦':/logiciel|cyber/i.test(s)?'🛡️':/sant/i.test(s)?'💊':/conso/i.test(s)?'🛒':/industrie|énerg|energ/i.test(s)?'🏭':/immo/i.test(s)?'🏢':'📊'}
+
+function render(s){
+  const pf=s.pf||{};
+  let h=`<header><div class="t">⚡ Cockpit <small>${esc(s.updatedLabel)}</small></div><button id="lockBtn">🔒 Verrouiller</button></header>`;
+  // portefeuille
+  h+=`<div class="card"><div><span class="pf-val">${pf.val!=null?money(pf.val,true):'—'}</span><span class="pf-day ${cls(pf.day)}">${sign(pf.day)} % auj.</span></div>
+    <div class="pf-sub">
+      <div class="pf-chip"><div class="l">Gain/perte total</div><div class="v ${cls(pf.pl)}">${pf.pl!=null?sign(pf.pl,0)+' $':'—'}${pf.plPct!=null?' ('+sign(pf.plPct)+' %)':''}</div></div>
+      ${pf.crypto?`<div class="pf-chip"><div class="l">🪙 Crypto (jour)</div><div class="v ${cls(pf.crypto.day)}">${sign(pf.crypto.day)} %</div></div>`:''}
+      ${pf.bourse?`<div class="pf-chip"><div class="l">📈 Bourse (jour)</div><div class="v ${cls(pf.bourse.day)}">${sign(pf.bourse.day)} %</div></div>`:''}
+    </div>${s.profile?`<div class="hint" style="margin-top:8px">Profil : ${esc(s.profile)}${s.cryptoW!=null?` · crypto ${String(s.cryptoW).replace('.',',')} %`:''}</div>`:''}</div>`;
+  // analyse approfondie
+  if(s.analyse){const a=s.analyse;
+    h+=`<h2>🔬 Analyse du jour <span class="badge">✨ Claude</span></h2><div class="card">`;
+    if(a.situation)h+=`<p class="an-sit">${a.situation}</p>`;
+    for(const sec of (a.sectors||[]))h+=`<div class="an-sec"><h4>${secEmoji(sec.name)} ${esc(sec.name)} <span class="${cls(sec.move)}">${sign(sec.move)} %</span></h4><p>${sec.why}</p></div>`;
+    for(const m of (a.movers||[]))h+=`<div class="an-sec"><h4>${esc(m.ticker)} <span class="${cls(m.move)}">${sign(m.move)} %</span></h4><p>${m.why}</p>${m.opinion?`<div class="an-op"><b>Mon avis</b> — ${m.opinion}</div>`:''}</div>`;
+    h+=`</div>`;
+  }
+  // mouvements par secteur
+  if((s.sectors||[]).length){h+=`<h2>📊 Mouvements par secteur</h2>`;
+    for(const sec of s.sectors)h+=`<div class="sec"><span class="n">${secEmoji(sec.s)} ${esc(sec.s)} <small>(${sec.n})</small></span><span class="a ${cls(sec.d)}">${sign(sec.d)} %</span></div>`;}
+  // tes positions en mouvement
+  if((s.movers||[]).length){h+=`<h2>💼 Tes positions en mouvement</h2>`;
+    for(const m of s.movers)h+=`<div class="mv ${m.d>=0?'u':'d'}"><div><div class="tk">${esc(m.t)} <span class="ty">${tyLabel(m.ty)}</span></div><div class="nm">${esc(m.n)}</div></div><div class="pc"><b class="${cls(m.d)}">${sign(m.d)} %</b><small>${money(m.p,m.c==='CAD'||m.ty==='crypto')}</small></div></div>`;}
+  // revue
+  if(s.review&&s.review.headline){h+=`<h2>🧠 Revue de marché</h2><div class="card"><div class="rev-h">${esc(s.review.headline)}</div>${s.review.intro?`<div class="rev-i">${s.review.intro}</div>`:''}</div>`;}
+  // alertes
+  if((s.alerts||[]).length){h+=`<h2>🔔 Alertes importantes</h2>`;
+    for(const a of s.alerts)h+=`<div class="al"><b>${esc(a.t)}</b> — ${esc(a.m)}</div>`;}
+  h+=`<div class="foot">Données de ${esc(s.updatedLabel)} · instantané chiffré · le cockpit complet est sur ton PC</div>`;
+  const app=document.getElementById('app'); app.innerHTML=h; app.hidden=false; document.getElementById('lock').hidden=true;
+  document.getElementById('lockBtn').onclick=()=>{try{localStorage.removeItem('cpm')}catch{};location.reload()};
+}
+
+async function unlock(pass,silent){
+  const err=document.getElementById('err'); err.textContent='';
+  try{
+    const enc=await fetchEnc();
+    const snap=await decrypt(enc,pass);
+    try{localStorage.setItem('cpm',pass)}catch{}
+    render(snap);
+  }catch(e){ if(!silent){ err.textContent='Mot de passe incorrect (ou données indisponibles).'; try{localStorage.removeItem('cpm')}catch{} } }
+}
+document.getElementById('go').onclick=()=>unlock(document.getElementById('pass').value);
+document.getElementById('pass').addEventListener('keydown',e=>{if(e.key==='Enter')unlock(e.target.value)});
+// déverrouillage auto si mot de passe déjà mémorisé
+try{const saved=localStorage.getItem('cpm'); if(saved) unlock(saved,true);}catch{}
+</script>
+</body>
+</html>

@@ -93,32 +93,26 @@ function secEmoji(s){return /crypto/i.test(s)?'🪙':/semi|puce/i.test(s)?'🔧'
 function render(s){
   const pf=s.pf||{};
   let h=`<header><div class="t">⚡ Cockpit <small>${esc(s.updatedLabel)}</small></div><button id="lockBtn">🔒 Verrouiller</button></header>`;
-  // portefeuille
-  h+=`<div class="card"><div><span class="pf-val">${pf.val!=null?money(pf.val,true):'—'}</span><span class="pf-day ${cls(pf.day)}">${sign(pf.day)} % auj.</span></div>
+  // --- chaque section est préparée séparément, puis assemblée dans l'ordre « coup d'œil » plus bas ---
+  const portfolio=`<div class="card"><div><span class="pf-val">${pf.val!=null?money(pf.val,true):'—'}</span><span class="pf-day ${cls(pf.day)}">${sign(pf.day)} % auj.</span></div>
     <div class="pf-sub">
       <div class="pf-chip"><div class="l">Gain/perte total</div><div class="v ${cls(pf.pl)}">${pf.pl!=null?sign(pf.pl,0)+' $':'—'}${pf.plPct!=null?' ('+sign(pf.plPct)+' %)':''}</div></div>
       ${pf.crypto?`<div class="pf-chip"><div class="l">🪙 Crypto (jour)</div><div class="v ${cls(pf.crypto.day)}">${sign(pf.crypto.day)} %</div></div>`:''}
       ${pf.bourse?`<div class="pf-chip"><div class="l">📈 Bourse (jour)</div><div class="v ${cls(pf.bourse.day)}">${sign(pf.bourse.day)} %</div></div>`:''}
     </div>${s.profile?`<div class="hint" style="margin-top:8px">Profil : ${esc(s.profile)}${s.cryptoW!=null?` · crypto ${String(s.cryptoW).replace('.',',')} %`:''}</div>`:''}</div>`;
-  // analyse approfondie
+  const positions=(s.movers||[]).length?`<h2>💼 Tes positions en mouvement</h2>`+s.movers.map(m=>`<div class="mv ${m.d>=0?'u':'d'}"><div><div class="tk">${esc(m.t)} <span class="ty">${tyLabel(m.ty)}</span></div><div class="nm">${esc(m.n)}</div></div><div class="pc"><b class="${cls(m.d)}">${sign(m.d)} %</b><small>${money(m.p,m.c==='CAD'||m.ty==='crypto')}</small></div></div>`).join(''):'';
+  const sectors=(s.sectors||[]).length?`<h2>📊 Mouvements par secteur</h2>`+s.sectors.map(sec=>`<div class="sec"><span class="n">${secEmoji(sec.s)} ${esc(sec.s)} <small>(${sec.n})</small></span><span class="a ${cls(sec.d)}">${sign(sec.d)} %</span></div>`).join(''):'';
+  let analyse='';
   if(s.analyse){const a=s.analyse;
-    h+=`<h2>🔬 Analyse du jour <span class="badge">✨ Claude</span></h2><div class="card">`;
-    if(a.situation)h+=`<p class="an-sit">${a.situation}</p>`;
-    for(const sec of (a.sectors||[]))h+=`<div class="an-sec"><h4>${secEmoji(sec.name)} ${esc(sec.name)} <span class="${cls(sec.move)}">${sign(sec.move)} %</span></h4><p>${sec.why}</p></div>`;
-    for(const m of (a.movers||[]))h+=`<div class="an-sec"><h4>${esc(m.ticker)} <span class="${cls(m.move)}">${sign(m.move)} %</span></h4><p>${m.why}</p>${m.opinion?`<div class="an-op"><b>Mon avis</b> — ${m.opinion}</div>`:''}</div>`;
-    h+=`</div>`;
-  }
-  // mouvements par secteur
-  if((s.sectors||[]).length){h+=`<h2>📊 Mouvements par secteur</h2>`;
-    for(const sec of s.sectors)h+=`<div class="sec"><span class="n">${secEmoji(sec.s)} ${esc(sec.s)} <small>(${sec.n})</small></span><span class="a ${cls(sec.d)}">${sign(sec.d)} %</span></div>`;}
-  // tes positions en mouvement
-  if((s.movers||[]).length){h+=`<h2>💼 Tes positions en mouvement</h2>`;
-    for(const m of s.movers)h+=`<div class="mv ${m.d>=0?'u':'d'}"><div><div class="tk">${esc(m.t)} <span class="ty">${tyLabel(m.ty)}</span></div><div class="nm">${esc(m.n)}</div></div><div class="pc"><b class="${cls(m.d)}">${sign(m.d)} %</b><small>${money(m.p,m.c==='CAD'||m.ty==='crypto')}</small></div></div>`;}
-  // revue
-  if(s.review&&s.review.headline){h+=`<h2>🧠 Revue de marché</h2><div class="card"><div class="rev-h">${esc(s.review.headline)}</div>${s.review.intro?`<div class="rev-i">${s.review.intro}</div>`:''}</div>`;}
-  // alertes
-  if((s.alerts||[]).length){h+=`<h2>🔔 Alertes importantes</h2>`;
-    for(const a of s.alerts)h+=`<div class="al"><b>${esc(a.t)}</b> — ${esc(a.m)}</div>`;}
+    analyse=`<h2>🔬 Analyse du jour <span class="badge">✨ Claude</span></h2><div class="card">`
+      +(a.situation?`<p class="an-sit">${a.situation}</p>`:'')
+      +(a.sectors||[]).map(sec=>`<div class="an-sec"><h4>${secEmoji(sec.name)} ${esc(sec.name)} <span class="${cls(sec.move)}">${sign(sec.move)} %</span></h4><p>${sec.why}</p></div>`).join('')
+      +(a.movers||[]).map(m=>`<div class="an-sec"><h4>${esc(m.ticker)} <span class="${cls(m.move)}">${sign(m.move)} %</span></h4><p>${m.why}</p>${m.opinion?`<div class="an-op"><b>Mon avis</b> — ${m.opinion}</div>`:''}</div>`).join('')
+      +`</div>`;}
+  const alertes=(s.alerts||[]).length?`<h2>🔔 Alertes importantes</h2>`+s.alerts.map(a=>`<div class="al"><b>${esc(a.t)}</b> — ${esc(a.m)}</div>`).join(''):'';
+  const review=(s.review&&s.review.headline)?`<h2>🧠 Revue de marché</h2><div class="card"><div class="rev-h">${esc(s.review.headline)}</div>${s.review.intro?`<div class="rev-i">${s.review.intro}</div>`:''}</div>`:'';
+  // ORDRE coup d'œil : 💰 ton argent → 💼 tes positions → 📊 le contexte secteur → 🔬 l'analyse/avis → 🔔 les alertes → 🧠 la revue de fond
+  h+=portfolio+positions+sectors+analyse+alertes+review;
   h+=`<div class="foot">Données de ${esc(s.updatedLabel)} · instantané chiffré · le cockpit complet est sur ton PC</div>`;
   const app=document.getElementById('app'); app.innerHTML=h; app.hidden=false; document.getElementById('lock').hidden=true;
   document.getElementById('lockBtn').onclick=()=>{try{localStorage.removeItem('cpm')}catch{};location.reload()};
